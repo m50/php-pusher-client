@@ -6,13 +6,23 @@ use m50\Pusher\Event;
 
 final class PusherException extends \Exception
 {
+    private ?Event $event = null;
+
     public static function fromEvent(Event $event): static
     {
-        return new static($event->data['message'], $event->data['code']);
+        $ret = new static($event->data['message'], $event->data['code']);
+        $ret->event = $event;
+
+        return $ret;
     }
 
     public static function unknown(): static
     {
         return new static('Unknown error occured', 500);
+    }
+
+    public function getEvent(): Event
+    {
+        return $this->event;
     }
 }

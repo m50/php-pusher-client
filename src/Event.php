@@ -2,21 +2,27 @@
 
 namespace m50\Pusher;
 
-use Amp\Websocket\WebsocketMessage;
+use Amp\Promise;
 use JsonSerializable;
+
+use function Amp\coroutine;
+use Amp\Websocket\Message as WebsocketMessage;
 
 final class Event implements JsonSerializable
 {
     public function __construct(
-        public readonly string $event,
-        public readonly array $data = [],
-        public readonly string $channel = ''
+        public string $event,
+        public array $data = [],
+        public string $channel = ''
     ) {
     }
 
-    public static function fromWebsocketMessage(WebsocketMessage $message): static
+    /** @return Promise<Event> */
+    public static function fromWebsocketMessage(WebsocketMessage $message): Promise
     {
-        return static::jsonDeserialize($message->buffer());
+        return coroutine(function () use ($message) {
+            return static::jsonDeserialize(yield $message->buffer());
+        })();
     }
 
     public static function jsonDeserialize(string $message): static

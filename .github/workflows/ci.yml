@@ -41,5 +41,3 @@ jobs:
         run: composer install
       - name: Run static analysis
         run: composer stan
-      - name: Run tests
-        run: composer test

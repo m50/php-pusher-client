@@ -2,9 +2,11 @@
 
 namespace m50\Pusher;
 
-use Amp\TimeoutCancellation;
-use Amp\Websocket\Client\WebsocketConnection;
+use Amp\Promise;
+use Amp\Websocket\Client\Connection as WebsocketConnection;
 use m50\Pusher\Exceptions\PusherException;
+
+use function Amp\coroutine;
 
 final class Channel
 {
@@ -25,61 +27,55 @@ final class Channel
     /**
      * Execute an action on every event that belongs to the channel.
      *
-     * @param (callable(Event $event): void) $onEvent
-     * @return void
+     * @param (callable(Event): void) $onEvent
+     * @param (callable(\Throwable): void)|null $onError
+     * @return Promise<void>
      */
-    public function subscribe(callable $onEvent, ?callable $onError = null): void
+    public function subscribe(callable $onEvent, ?callable $onError = null): Promise
     {
-        foreach ($this->conn as $message) {
-            $event = Event::fromWebsocketMessage($message);
-            if ($onError !== null && Event::isError($event)) {
-                $onError(PusherException::fromEvent($event));
-            } elseif ($this->filterEvent($event)) {
-                $onEvent($event);
-            }
+        return coroutine(function () use ($onEvent, $onError) {
+            while ($message = yield $this->conn->receive()) {
+                $event = yield Event::fromWebsocketMessage($message);
+                if ($onError !== null && Event::isError($event)) {
+                    $onError(PusherException::fromEvent($event));
+                } elseif ($this->filterEvent($event)) {
+                    $onEvent($event);
+                }
 
-            if (!$this->continueListening) {
-                $this->close();
-                return;
+                if (!$this->continueListening) {
+                    yield $this->close();
+                    return;
+                }
             }
-        }
+        })();
     }
 
-    /**
-     * Wait for the next event that belongs to channel.
-     * @param float $timeout Seconds before cancellation.
-     */
-    public function next(?float $timeout = null): Event
+    /** @return Promise<Event> */
+    public function next(): Promise
     {
-        while ($message = $this->conn->receive($timeout ? $this->getTimeout($timeout) : null)) {
-            $event = Event::fromWebsocketMessage($message);
-            if (Event::isError($event)) {
-                throw PusherException::fromEvent($event);
-            } elseif ($this->filterEvent($event)) {
-                return $event;
+        return coroutine(function () {
+            while ($message = yield $this->conn->receive()) {
+                $event = yield Event::fromWebsocketMessage($message);
+                if (Event::isError($event)) {
+                    throw PusherException::fromEvent($event);
+                } elseif ($this->filterEvent($event)) {
+                    return $event;
+                }
             }
-        }
 
-        throw PusherException::unknown();
+            throw PusherException::unknown();
+        })();
     }
 
-    public function close(): void
+    public function close(): Promise
     {
         $this->unsubscribe();
-        ($this->closeCommand)();
+        return ($this->closeCommand)();
     }
 
     private function filterEvent(Event $event): bool
     {
         return $event->channel === $this->name
             && Event::notSubscriptionSucceeded($event);
-    }
-
-    private function getTimeout(float $timeout): TimeoutCancellation
-    {
-        return new TimeoutCancellation(
-            $timeout,
-            "Next from channel {$this->name} timed out after {$timeout} seconds"
-        );
     }
 }

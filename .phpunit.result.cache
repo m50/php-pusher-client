@@ -1,0 +1,1 @@
+{"version":1,"defects":{"Tests\\ClientTest::testClientListenToChannel":4,"Tests\\ClientTest::testReadFromClientNotChannel":4,"Tests\\ClientTest::testChannelSubscribeAndThenUnsubscribe":4},"times":{"Tests\\ClientTest::testClientListenToChannel":0.002,"Tests\\ClientTest::testReadFromClientNotChannel":0,"Tests\\ClientTest::testChannelSubscribeAndThenUnsubscribe":0}}

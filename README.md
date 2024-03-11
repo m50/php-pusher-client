@@ -1,4 +1,7 @@
-# Pusher Client
+# Pusher Client for php8.0
+
+> Note: This branch is for php8.0, and is using outdated libraries and has no tests.
+> This is for compatibility only and should not be used normally.
 
 ## Installation
 
@@ -50,4 +53,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-

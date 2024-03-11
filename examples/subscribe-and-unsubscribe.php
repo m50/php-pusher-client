@@ -3,14 +3,18 @@
 use m50\Pusher\Client;
 use m50\Pusher\Event;
 
+use function Amp\coroutine;
+
 include_once('vendor/autoload.php');
 
-$client = Client::create('my-app', 'us3');
+Amp\Loop::run(coroutine(function () {
+    $client = yield Client::create('my-app', 'us3');
 
-$channel = $client->channel('my-channel');
-$channel->subscribe(function (Event $event) use ($channel) {
-    var_dump($event);
-    if ($event->event === 'END') {
-        $channel->unsubscribe();
-    }
-});
+    $channel = yield $client->channel('my-channel');
+    yield $channel->subscribe(function (Event $event) use ($channel) {
+        var_dump($event);
+        if ($event->event === 'END') {
+            $channel->unsubscribe();
+        }
+    });
+}));

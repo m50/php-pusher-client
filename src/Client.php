@@ -4,61 +4,64 @@ declare(strict_types=1);
 
 namespace m50\Pusher;
 
-use Amp\Websocket\Client\WebsocketConnection;
+use Amp\Promise;
+use Amp\Websocket\Client\Connection as WebsocketConnection;
 use Traversable;
 
+use function Amp\coroutine;
 use function Amp\Websocket\Client\connect;
 
-class Client implements \IteratorAggregate
+class Client
 {
     private array $channels = [];
 
     public function __construct(
         private WebsocketConnection $conn
     ) {
-        register_shutdown_function(function () {
-            $this->close();
-        });
     }
 
-    public function getIterator(): Traversable
+    public static function create(string $appId, ?string $cluster = null): Promise
     {
-        foreach ($this->conn as $message) {
-            yield Event::fromWebsocketMessage($message);
-        }
+        return coroutine(function () use ($appId, $cluster) {
+            $connection = yield connect(ApiSettings::createUrl($appId, $cluster));
+
+            return new Client($connection);
+        })();
     }
 
-    public static function create(string $appId, ?string $cluster = null): Client
+    /** @return Promise<Channel> */
+    public function channel(string $channel): Promise
     {
-        $connection = connect(ApiSettings::createUrl($appId, $cluster));
+        return coroutine(function () use ($channel) {
+            if (isset($this->channels[$channel])) {
+                return $this->channels[$channel];
+            }
 
-        return new Client($connection);
+            yield $this->send(Event::subscribeTo($channel));
+
+            $closeFn = coroutine(function () use ($channel) {
+                yield $this->send(Event::unsubscribeFrom($channel));
+                unset($this->channels[$channel]);
+            });
+
+            return $this->channels[$channel] = new Channel($channel, $this->conn, \Closure::fromCallable($closeFn));
+        })();
     }
 
-    public function channel(string $channel): Channel
+    /** @return Promise<void> */
+    public function send(Event|array $message): Promise
     {
-        if (isset($this->channels[$channel])) {
-            return $this->channels[$channel];
-        }
-
-        $this->send(Event::subscribeTo($channel));
-
-        return $this->channels[$channel] = new Channel($channel, $this->conn, function () use ($channel) {
-            $this->send(Event::unsubscribeFrom($channel));
-            unset($this->channels[$channel]);
-        });
+        return $this->conn->send(\json_encode($message));
     }
 
-    public function send(Event|array $message): void
+    /** @return Promise<void> */
+    public function close(): Promise
     {
-        $this->conn->sendText(\json_encode($message));
-    }
-
-    public function close(): void
-    {
-        foreach ($this->channels as $channel) {
-            $channel->close();
-        }
-        $this->conn->close();
+        return coroutine(function () {
+            foreach ($this->channels as $channel) {
+                yield $channel->close();
+            }
+            return yield $this->conn->close();
+        })();
     }
 }
