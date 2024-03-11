@@ -6,7 +6,7 @@
 ## Installation
 
 ```bash
-composer require m50/pusher-client
+composer require m50/pusher-client:dev-php8.0
 ```
 
 ## Usage
