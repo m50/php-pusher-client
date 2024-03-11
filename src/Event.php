@@ -5,12 +5,12 @@ namespace m50\Pusher;
 use Amp\Websocket\WebsocketMessage;
 use JsonSerializable;
 
-final readonly class Event implements JsonSerializable
+final class Event implements JsonSerializable
 {
     public function __construct(
-        public string $event,
-        public array $data = [],
-        public string $channel = ''
+        public readonly string $event,
+        public readonly array $data = [],
+        public readonly string $channel = ''
     ) {
     }
 
