@@ -50,7 +50,7 @@ final class Channel
         })();
     }
 
-    /** @return Promise<Event> */
+    /** @return Promise<Event|null> */
     public function next(): Promise
     {
         return coroutine(function () {
@@ -62,8 +62,7 @@ final class Channel
                     return $event;
                 }
             }
-
-            throw PusherException::unknown();
+            return null;
         })();
     }
 
