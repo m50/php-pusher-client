@@ -25,7 +25,8 @@ final class Channel
     /**
      * Execute an action on every event that belongs to the channel.
      *
-     * @param (callable(Event $event): void) $onEvent
+     * @param (callable(Event): void) $onEvent
+     * @param (callable(\Throwable): void) $onError
      * @return void
      */
     public function subscribe(callable $onEvent, ?callable $onError = null): void
